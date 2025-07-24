@@ -1,10 +1,16 @@
-# Byte-compiled / optimized / DLL files
+# compiled
 *.pyc
 *.pyo
 *.pyd
 __pycache__/
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
 
-# Ren'Py cache files
+# renpy cache
 cache/
 *.rpyc
 *.rpyb
@@ -17,6 +23,8 @@ persistent
 # Log and error files
 *.log
 *.txt
+traceback.txt
+files.txt
 
 # Ignore translation files
 tl/
