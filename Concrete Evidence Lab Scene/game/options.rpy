@@ -42,7 +42,7 @@ define gui.about = _p("""
 ## distribution. This must be ASCII-only, and must not contain spaces, colons,
 ## or semicolons.
 
-define build.name = "ForensicsLabL1Prototype"
+define build.name = "ConcreteEvidenceLabScene"
 
 
 ## Sounds and music ############################################################
@@ -148,7 +148,7 @@ default preferences.afm_time = 15
 ## This generally should not be changed, and if it is, should always be a
 ## literal string, not an expression.
 
-define config.save_directory = "ForensicsLabL1Prototype-1720145659"
+define config.save_directory = "ConcreteEvidenceLabScene-1720145659"
 
 
 ## Icon ########################################################################
