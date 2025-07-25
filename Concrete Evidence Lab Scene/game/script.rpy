@@ -46,7 +46,6 @@ init python:
             "timestamp": time.time()
         }
         
-        # Send using Ren'Py's built-in fetch function
         try:
             # Build full API URL
             full_api_url = api_server_url + api_endpoint
