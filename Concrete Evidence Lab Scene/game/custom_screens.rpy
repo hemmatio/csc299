@@ -30,7 +30,7 @@ screen data_analysis_lab_screen:
     #         unhovered Notify('')
     #         action Jump('afis')
     hbox:
-        xpos 0.55 yalign 0.25
+        xpos 0.25 yalign 0.25
         imagebutton:
             idle "dna_software_idle"
             hover "dna_software_hover"
@@ -114,9 +114,12 @@ screen dna_analysis_screen:
 
     # Warrant samples section (right side)
     vbox:
-        xpos 0.65 ypos 0.2
-        text "{color=#000000}Warrant Samples{/color}" size 20
+        xpos 0.62 ypos 0.206
+        text "{color=#ffffff}Warrant Samples{/color}" size 22
         
+    hbox:
+        xpos 0.49 ypos 0.225
+        spacing -20
         textbutton "Male Suspect":
             style "afis_button"
             action [SetLocalVariable('selected_warrant', 'male')]
@@ -124,6 +127,20 @@ screen dna_analysis_screen:
         textbutton "Female Suspect":
             style "afis_button"
             action [SetLocalVariable('selected_warrant', 'female')]
+    
+    # Display warrant sample DNA profile image
+    if selected_warrant != "":
+        vbox:
+            xpos 0.55 ypos 0.28
+            text "{color=#000000}DNA Profile:{/color}" size 16
+            if selected_warrant == "male":
+                # Placeholder image for male DNA profile
+                add "images/data_analysis_lab/male_dna_profile.jpg" at Transform(zoom=0.475)
+                # text "{color=#000000}Male Suspect DNA Profile{/color}" size 14
+            elif selected_warrant == "female":
+                # Placeholder image for female DNA profile
+                add "images/data_analysis_lab/female_dna_profile.jpg" at Transform(zoom=0.462)
+                # text "{color=#000000}Female Suspect DNA Profile{/color}" size 14
 
     # Import evidence section (left side)
     hbox:
@@ -166,23 +183,34 @@ screen dna_analysis_screen:
             idle "software_interface"
             hover "software_import_hover"
             
-            hotspot (100,241,400,756) action [
+            hotspot (294, 249, 660, 734) action [
                 SetLocalVariable('interface_import', False), 
                 SetLocalVariable('interface_imported', True),
                 SetLocalVariable('selected_evidence', item_dragged if item_dragged != '' else 'none'),
                 Function(set_cursor, '')]
 
     showif interface_imported and selected_evidence != "":
-        hbox:
-            xpos 0.18 ypos 0.3
+        vbox:
+            xpos 0.16 ypos 0.235
+            text "{color=#000000}Evidence DNA Profile:{/color}" size 16
             if selected_evidence != "none":
-                text "{color=#000000}Loaded: [get_dna_display_name(selected_evidence)]{/color}" size 16
+                text "{color=#000000}Loaded: [get_dna_display_name(selected_evidence)]{/color}" size 14
+                if selected_evidence == "male_dna_profile":
+                    add "images/data_analysis_lab/male_dna_profile.jpg" at Transform(zoom=0.475)
+                elif selected_evidence == "female_dna_profile":
+                    add "images/data_analysis_lab/female_dna_profile.jpg" at Transform(zoom=0.462)
+                elif selected_evidence == "mixed_dna_profile":
+                    add "images/data_analysis_lab/mixed_dna_profile.jpg" at Transform(zoom=0.475)
+                else:
+                    # Fallback for any other evidence types
+                    add "gui/frame.png" at Transform(zoom=0.4)
+                    text "{color=#000000}DNA profile image not available{/color}" size 12
             else:
                 text "{color=#000000}No DNA evidence selected{/color}" size 16
     
     if dna_comparison_result != "":
         hbox:
-            xpos 0.2 ypos 0.5
+            xpos 0.21 ypos 0.871
             vbox:
                 text "{color=#000000}Analysis Result:{/color}" size 18
                 text "{color=#000000}[dna_comparison_result]{/color}" size 16
@@ -266,16 +294,21 @@ screen pcr_machine_screen:
             text "First, we'll prepare the sample. What volumes do we need?"
             text "We need: 200µl whole blood, QIAGEN Protease, and Buffer AL."
             
+            # Randomize button order
+            $ step0_buttons = [
+                ("20µl Protease, 200µl Buffer AL", [SetVariable("pcr_step", 1), SetVariable("pcr_state", "filled")]),
+                ("50µl Protease, 100µl Buffer AL", [SetVariable("pcr_step", -1), SetVariable("pcr_error", "Incorrect protease/buffer volumes. The proper amounts are 20µl Protease and 200µl Buffer AL.")])
+            ]
+            $ import random
+            $ random.shuffle(step0_buttons)
+            
             hbox:
                 xalign 0.5
                 spacing 20
-                textbutton "20µl Protease, 200µl Buffer AL":
-                    style "back_button"
-                    action [SetVariable("pcr_step", 1), SetVariable("pcr_state", "filled")]
-                textbutton "50µl Protease, 100µl Buffer AL":
-                    style "back_button"
-                    action [SetVariable("pcr_step", -1),
-                            SetVariable("pcr_error", "Incorrect protease/buffer volumes. The proper amounts are 20µl Protease and 200µl Buffer AL.")]
+                for button_text, button_action in step0_buttons:
+                    textbutton button_text:
+                        style "back_button"
+                        action button_action
     
     elif pcr_step == 1:
         vbox:
@@ -284,20 +317,21 @@ screen pcr_machine_screen:
             text "Lab Assistant: Good! Now we mix by vortexing and incubate."
             text "What temperature should we use for incubation?"
             
+            # Randomize button order
+            $ step1_buttons = [
+                ("37°C for 15 minutes", [SetVariable("pcr_step", -1), SetVariable("pcr_error", "Incorrect incubation temperature. We need 56°C for 10 minutes to properly lyse the cells.")]),
+                ("56°C for 10 minutes", [SetVariable("pcr_step", 2)]),
+                ("95°C for 5 minutes", [SetVariable("pcr_step", -1), SetVariable("pcr_error", "That's the PCR denaturation temperature, not for sample incubation. We need 56°C for 10 minutes.")])
+            ]
+            $ random.shuffle(step1_buttons)
+            
             hbox:
                 xalign 0.5
                 spacing 20
-                textbutton "37°C for 15 minutes":
-                    style "back_button"
-                    action [SetVariable("pcr_step", -1),
-                            SetVariable("pcr_error", "Incorrect incubation temperature. We need 56°C for 10 minutes to properly lyse the cells.")]
-                textbutton "56°C for 10 minutes":
-                    style "back_button"
-                    action [SetVariable("pcr_step", 2)]
-                textbutton "95°C for 5 minutes":
-                    style "back_button"
-                    action [SetVariable("pcr_step", -1),
-                            SetVariable("pcr_error", "That's the PCR denaturation temperature, not for sample incubation. We need 56°C for 10 minutes.")]
+                for button_text, button_action in step1_buttons:
+                    textbutton button_text:
+                        style "back_button"
+                        action button_action
     
     elif pcr_step == 2:
         vbox:
@@ -306,20 +340,21 @@ screen pcr_machine_screen:
             text "Lab Assistant: After incubation and spinning down, we add ethanol."
             text "What concentration of ethanol should we use?"
             
+            # Randomize button order
+            $ step2_buttons = [
+                ("70% ethanol", [SetVariable("pcr_step", -1), SetVariable("pcr_error", "70% ethanol is too dilute. We need 96-100% ethanol for proper DNA precipitation.")]),
+                ("96-100% ethanol", [SetVariable("pcr_step", 3)]),
+                ("50% ethanol", [SetVariable("pcr_step", -1), SetVariable("pcr_error", "50% ethanol concentration is far too low. We need 96-100% ethanol.")])
+            ]
+            $ random.shuffle(step2_buttons)
+            
             hbox:
                 xalign 0.5
                 spacing 20
-                textbutton "70% ethanol":
-                    style "back_button"
-                    action [SetVariable("pcr_step", -1),
-                            SetVariable("pcr_error", "70% ethanol is too dilute. We need 96-100% ethanol for proper DNA precipitation.")]
-                textbutton "96-100% ethanol":
-                    style "back_button"
-                    action [SetVariable("pcr_step", 3)]
-                textbutton "50% ethanol":
-                    style "back_button"
-                    action [SetVariable("pcr_step", -1),
-                            SetVariable("pcr_error", "50% ethanol concentration is far too low. We need 96-100% ethanol.")]
+                for button_text, button_action in step2_buttons:
+                    textbutton button_text:
+                        style "back_button"
+                        action button_action
     
     elif pcr_step == 3:
         vbox:
@@ -329,20 +364,21 @@ screen pcr_machine_screen:
             text "The DNA binds to the filter. Next, we wash with Buffer AW1."
             text "How much Buffer AW1 should we add?"
             
+            # Randomize button order
+            $ step3_buttons = [
+                ("200µl Buffer AW1", [SetVariable("pcr_step", -1), SetVariable("pcr_error", "Insufficient buffer volume. We need 500µl Buffer AW1 for proper washing.")]),
+                ("500µl Buffer AW1", [SetVariable("pcr_step", 4)]),
+                ("1000µl Buffer AW1", [SetVariable("pcr_step", -1), SetVariable("pcr_error", "Excessive buffer volume could damage the column. We need exactly 500µl Buffer AW1.")])
+            ]
+            $ random.shuffle(step3_buttons)
+            
             hbox:
                 xalign 0.5
                 spacing 20
-                textbutton "200µl Buffer AW1":
-                    style "back_button"
-                    action [SetVariable("pcr_step", -1),
-                            SetVariable("pcr_error", "Insufficient buffer volume. We need 500µl Buffer AW1 for proper washing.")]
-                textbutton "500µl Buffer AW1":
-                    style "back_button"
-                    action [SetVariable("pcr_step", 4)]
-                textbutton "1000µl Buffer AW1":
-                    style "back_button"
-                    action [SetVariable("pcr_step", -1),
-                            SetVariable("pcr_error", "Excessive buffer volume could damage the column. We need exactly 500µl Buffer AW1.")]
+                for button_text, button_action in step3_buttons:
+                    textbutton button_text:
+                        style "back_button"
+                        action button_action
     
     elif pcr_step == 4:
         vbox:
@@ -351,20 +387,21 @@ screen pcr_machine_screen:
             text "Lab Assistant: After washing with AW1, we use Buffer AW2."
             text "How long should we centrifuge with AW2?"
             
+            # Randomize button order
+            $ step4_buttons = [
+                ("1 minute", [SetVariable("pcr_step", -1), SetVariable("pcr_error", "Insufficient centrifugation time. Buffer AW2 requires 3 minutes for complete salt removal.")]),
+                ("3 minutes", [SetVariable("pcr_step", 5)]),
+                ("10 minutes", [SetVariable("pcr_step", -1), SetVariable("pcr_error", "Excessive centrifugation time could damage the DNA. 3 minutes is optimal.")])
+            ]
+            $ random.shuffle(step4_buttons)
+            
             hbox:
                 xalign 0.5
                 spacing 20
-                textbutton "1 minute":
-                    style "back_button"
-                    action [SetVariable("pcr_step", -1),
-                            SetVariable("pcr_error", "Insufficient centrifugation time. Buffer AW2 requires 3 minutes for complete salt removal.")]
-                textbutton "3 minutes":
-                    style "back_button"
-                    action [SetVariable("pcr_step", 5)]
-                textbutton "10 minutes":
-                    style "back_button"
-                    action [SetVariable("pcr_step", -1),
-                            SetVariable("pcr_error", "Excessive centrifugation time could damage the DNA. 3 minutes is optimal.")]
+                for button_text, button_action in step4_buttons:
+                    textbutton button_text:
+                        style "back_button"
+                        action button_action
     
     elif pcr_step == 5:
         vbox:
@@ -373,20 +410,21 @@ screen pcr_machine_screen:
             text "Lab Assistant: Finally, we elute the DNA with Buffer AE."
             text "How much DNA should we use for a 50µl PCR reaction?"
             
+            # Randomize button order
+            $ step5_buttons = [
+                ("5µl extracted DNA", [SetVariable("pcr_step", -1), SetVariable("pcr_error", "Too much DNA will inhibit the PCR reaction. Use only 1µl for a 50µl reaction.")]),
+                ("1µl extracted DNA", [SetVariable("pcr_step", 6)]),
+                ("10µl extracted DNA", [SetVariable("pcr_step", -1), SetVariable("pcr_error", "Excessive DNA amount will completely inhibit PCR. Use only 1µl.")])
+            ]
+            $ random.shuffle(step5_buttons)
+            
             hbox:
                 xalign 0.5
                 spacing 20
-                textbutton "5µl extracted DNA":
-                    style "back_button"
-                    action [SetVariable("pcr_step", -1),
-                            SetVariable("pcr_error", "Too much DNA will inhibit the PCR reaction. Use only 1µl for a 50µl reaction.")]
-                textbutton "1µl extracted DNA":
-                    style "back_button"
-                    action [SetVariable("pcr_step", 6)]
-                textbutton "10µl extracted DNA":
-                    style "back_button"
-                    action [SetVariable("pcr_step", -1),
-                            SetVariable("pcr_error", "Excessive DNA amount will completely inhibit PCR. Use only 1µl.")]
+                for button_text, button_action in step5_buttons:
+                    textbutton button_text:
+                        style "back_button"
+                        action button_action
     
     elif pcr_step == 6:
         vbox:
@@ -396,20 +434,21 @@ screen pcr_machine_screen:
             text "Now we need to compare this DNA profile to a reference sample."
             text "What should we compare it against?"
             
+            # Randomize button order
+            $ step6_buttons = [
+                ("Random database profiles", [SetVariable("pcr_step", -1), SetVariable("pcr_error", "Incorrect comparison method. We need a specific suspect sample obtained legally.")]),
+                ("Blood from accused via warrant", [SetVariable("pcr_step", 7)]),
+                ("Any available samples", [SetVariable("pcr_step", -1), SetVariable("pcr_error", "No proper legal authorization. We need blood from the accused obtained via proper warrant.")])
+            ]
+            $ random.shuffle(step6_buttons)
+            
             hbox:
                 xalign 0.5
                 spacing 20
-                textbutton "Random database profiles":
-                    style "back_button"
-                    action [SetVariable("pcr_step", -1),
-                            SetVariable("pcr_error", "Incorrect comparison method. We need a specific suspect sample obtained legally.")]
-                textbutton "Blood from accused via warrant":
-                    style "back_button"
-                    action [SetVariable("pcr_step", 7)]
-                textbutton "Any available samples":
-                    style "back_button"
-                    action [SetVariable("pcr_step", -1),
-                            SetVariable("pcr_error", "No proper legal authorization. We need blood from the accused obtained via proper warrant.")]
+                for button_text, button_action in step6_buttons:
+                    textbutton button_text:
+                        style "back_button"
+                        action button_action
     
     elif pcr_step == 7:
         vbox:

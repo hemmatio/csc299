@@ -97,15 +97,15 @@ init python:
         global dna_comparison_result, dna_comparison_results
         
         if evidence_name == "male_dna_profile" and warrant_type == "male":
-            dna_comparison_result = "MATCH: Evidence matches male suspect warrant sample."
+            dna_comparison_result = "INCLUSION: Evidence is consistent with male suspect warrant sample."
             # Replace evidence with identified version
             replace_dna_evidence("male_dna_profile", "identified_male_dna")
         elif evidence_name == "female_dna_profile" and warrant_type == "female":
-            dna_comparison_result = "MATCH: Evidence matches female suspect warrant sample."
+            dna_comparison_result = "INCLUSION: Evidence is consistent with female suspect warrant sample."
             # Replace evidence with identified version
             replace_dna_evidence("female_dna_profile", "identified_female_dna")
         elif evidence_name == "mixed_dna_profile":
-            dna_comparison_result = "INCONCLUSIVE: Mixed profile cannot be directly compared to single warrant."
+            dna_comparison_result = "INCONCLUSIVE: Profile does not raise conclusive results."
         else:
             dna_comparison_result = "NO MATCH: Evidence does not match selected warrant sample."
         
@@ -149,7 +149,7 @@ init python:
         display_names = {
             "male_dna_profile": "Unknown DNA Profile #1",
             "female_dna_profile": "Unknown DNA Profile #2", 
-            "mixed_dna_profile": "Unknown DNA Profile #3 (Mixed)",
+            "mixed_dna_profile": "Unknown DNA Profile #3",
             "identified_male_dna": "Male Suspect DNA (Identified)",
             "identified_female_dna": "Female Suspect DNA (Identified)"
         }
@@ -331,8 +331,8 @@ label lab_hallway_intro:
     #show screen toolbox_button_screen onlayer over_screens     
     scene lab_hallway_idle
     "Welcome to the lab!"
-    "This is where you will spend time analyzing the evidence you have collected."
-    "Let's get started!"
+    "Thanks to an increase in budget, you've been assigned a lab assistant to help you with your investigations."
+    "They will mainly assist you with the Materials Lab. Let's get started!"
 
 label hallway:
     hide screen inventory
