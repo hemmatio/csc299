@@ -17,6 +17,23 @@ default current_dna_evidence = None
 default dna_comparison_result = ""
 default dna_samples_added = False
 
+### DNA sample tracking system (replaces inventory)
+default dna_samples_available = []  # Available DNA samples after PCR
+default dna_samples_status = {}     # Track status of each sample (available, identified, discarded)
+
+### FARO analysis variables
+default faro_scenes_analyzed = {"scene1": False, "scene2": False, "scene3": False}
+
+### Completion tracking variables
+default male_dna_identified = False
+default female_dna_identified = False
+default mixed_dna_discarded = False
+
+### FARO scene completion tracking
+default scene1_analyzed = False
+default scene2_analyzed = False
+default scene3_analyzed = False
+
 ### Web tracking variables
 default username = ""  # Set this when user logs in
 default session_start_time = 0
@@ -27,6 +44,12 @@ default api_endpoint = "/api/submit-progress"
 init python:
     import time
     import json
+    
+    def check_analysis_completion():
+        """Check if all required analysis tasks are complete using custom tracking"""
+        all_scenes_analyzed = scene1_analyzed and scene2_analyzed and scene3_analyzed
+        all_dna_identified = male_dna_identified and female_dna_identified and mixed_dna_discarded
+        return all_scenes_analyzed and all_dna_identified
     
     def get_current_session_time():
         """Calculate time spent in current session"""
@@ -81,79 +104,114 @@ init python:
             pcr_mistakes.append(mistake_text)
     
     def add_dna_samples():
-        """Add DNA samples to toolbox after successful PCR"""
-        global dna_samples_added
+        """Add DNA samples to custom tracking system after successful PCR"""
+        global dna_samples_added, dna_samples_available, dna_samples_status
         if not dna_samples_added:
-            # Add three DNA samples to inventory
-            addToInventory(["male_dna_profile", "female_dna_profile", "mixed_dna_profile"])
+            # Initialize DNA samples in custom tracking system
+            dna_samples_available = [
+                {"id": "dna_sample_1", "name": "DNA Sample 1", "type": "male_dna_profile"},
+                {"id": "dna_sample_2", "name": "DNA Sample 2", "type": "female_dna_profile"}, 
+                {"id": "dna_sample_3", "name": "DNA Sample 3", "type": "mixed_dna_profile"}
+            ]
+            
+            # Initialize status tracking
+            dna_samples_status = {
+                "dna_sample_1": "available",
+                "dna_sample_2": "available", 
+                "dna_sample_3": "available"
+            }
+            
             dna_samples_added = True
             
             # Send progress data when PCR is completed
             if username:
                 send_progress_data(username)
     
-    def compare_dna_profiles(evidence_name, warrant_type):
-        """Compare DNA evidence with warrant samples"""
-        global dna_comparison_result, dna_comparison_results
+    def compare_dna_profiles(evidence_id, warrant_type):
+        """Compare DNA evidence with warrant samples using custom tracking"""
+        global dna_comparison_result, dna_comparison_results, male_dna_identified, female_dna_identified
+        global dna_samples_status
         
-        if evidence_name == "male_dna_profile" and warrant_type == "male":
+        # Get the sample type from our tracking system
+        sample_type = None
+        for sample in dna_samples_available:
+            if sample["id"] == evidence_id:
+                sample_type = sample["type"]
+                break
+        
+        if sample_type == "male_dna_profile" and warrant_type == "male":
             dna_comparison_result = "INCLUSION: Evidence is consistent with male suspect warrant sample."
-            # Replace evidence with identified version
-            replace_dna_evidence("male_dna_profile", "identified_male_dna")
-        elif evidence_name == "female_dna_profile" and warrant_type == "female":
+            male_dna_identified = True
+            dna_samples_status[evidence_id] = "identified_male"
+        elif sample_type == "female_dna_profile" and warrant_type == "female":
             dna_comparison_result = "INCLUSION: Evidence is consistent with female suspect warrant sample."
-            # Replace evidence with identified version
-            replace_dna_evidence("female_dna_profile", "identified_female_dna")
-        elif evidence_name == "mixed_dna_profile":
+            female_dna_identified = True
+            dna_samples_status[evidence_id] = "identified_female"
+        elif sample_type == "mixed_dna_profile":
             dna_comparison_result = "INCONCLUSIVE: Profile does not raise conclusive results."
         else:
             dna_comparison_result = "NO MATCH: Evidence does not match selected warrant sample."
         
         # Track the result for progress monitoring
         dna_comparison_results.append(dna_comparison_result)
+        if check_analysis_completion():
+            renpy.jump('analysis_complete')
         
         # Send progress data after each comparison (if username is set)
         if username:
             send_progress_data(username)
     
-    def discard_mixed_sample(evidence_name):
-        """Remove mixed sample from evidence"""
-        global dna_comparison_result
+    def discard_mixed_sample(evidence_id):
+        """Remove mixed sample from custom tracking system"""
+        global dna_comparison_result, mixed_dna_discarded, dna_samples_status
         
-        if evidence_name == "mixed_dna_profile":
+        # Get the sample type from our tracking system
+        sample_type = None
+        for sample in dna_samples_available:
+            if sample["id"] == evidence_id:
+                sample_type = sample["type"]
+                break
+        
+        if sample_type == "mixed_dna_profile":
             dna_comparison_result = "Mixed sample excluded from analysis."
-            # Remove from inventory using proper method
-            removeInventoryItemTwo("mixed_dna_profile")
-    
-    def replace_dna_evidence(old_name, new_name):
-        """Replace DNA evidence with identified version"""
-        # Remove old evidence and add new identified version
-        removeInventoryItemTwo(old_name)
-        addToInventory([new_name])
+            mixed_dna_discarded = True
+            dna_samples_status[evidence_id] = "discarded"
+
+        if check_analysis_completion():
+            renpy.jump('analysis_complete')
     
     def set_dna_evidence_from_cursor():
-        """Set the selected DNA evidence based on item_dragged"""
-        global item_dragged
-        # This function captures which DNA evidence was dragged from the inventory
-        dna_evidence_items = ['male_dna_profile', 'female_dna_profile', 'mixed_dna_profile', 
-                            'identified_male_dna', 'identified_female_dna']
-        
-        if item_dragged in dna_evidence_items:
-            renpy.store.selected_evidence = item_dragged
-        else:
-            renpy.store.selected_evidence = "none"
+        """Legacy function - no longer needed with custom DNA selection"""
+        pass
         
     
-    def get_dna_display_name(name):
-        """Get display name for DNA evidence"""
-        display_names = {
-            "male_dna_profile": "Unknown DNA Profile #1",
-            "female_dna_profile": "Unknown DNA Profile #2", 
-            "mixed_dna_profile": "Unknown DNA Profile #3",
-            "identified_male_dna": "Male Suspect DNA (Identified)",
-            "identified_female_dna": "Female Suspect DNA (Identified)"
-        }
-        return display_names.get(name, name)
+    def get_dna_display_name(sample_id):
+        """Get display name for DNA evidence using custom tracking"""
+        if not dna_samples_available:
+            return "No samples available"
+        
+        # Find the sample by ID
+        for sample in dna_samples_available:
+            if sample["id"] == sample_id:
+                status = dna_samples_status.get(sample_id, "available")
+                
+                if status == "identified_male":
+                    return "Male Suspect DNA (Identified)"
+                elif status == "identified_female":
+                    return "Female Suspect DNA (Identified)"
+                elif status == "discarded":
+                    return "Discarded Sample"
+                else:
+                    return sample["name"]
+        
+        return "Unknown Sample"
+    
+    def get_dna_sample_type(sample_id):
+        """Get the DNA sample type for analysis"""
+        for sample in dna_samples_available:
+            if sample["id"] == sample_id:
+                return sample["type"]
+        return None
     
     class DNAEvidence:
         def __init__(self, name, display_name):
@@ -348,6 +406,9 @@ label afis:
 label dna_analysis:
     call screen dna_analysis_screen
 
+label faro_analysis:
+    call screen faro_analysis_screen
+
 label materials_lab:
     show screen back_button_screen('hallway') onlayer over_screens
     call screen materials_lab_screen
@@ -363,6 +424,8 @@ label analytical_instruments:
 label pcr_machine:
     show screen back_button_screen('analytical_instruments') onlayer over_screens
     call screen pcr_machine_screen
-    
+
+label analysis_complete:
+    call screen analysis_complete_screen
     
 return

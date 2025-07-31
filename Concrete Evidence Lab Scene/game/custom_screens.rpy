@@ -37,6 +37,15 @@ screen data_analysis_lab_screen:
             hovered Notify("CODIS DNA Analysis Software")
             unhovered Notify('')
             action Jump('dna_analysis')
+    
+    hbox:
+        xpos 0.35 yalign 0.25
+        imagebutton:
+            idle "images/data_analysis_lab/faro/faro_software_idle.png"
+            hover "images/data_analysis_lab/faro/faro_software_hover.png"
+            hovered Notify("FARO Scene Documentation Software")
+            unhovered Notify('')
+            action Jump('faro_analysis')
 
 screen afis_screen:
     default afis_bg = "software_interface"
@@ -109,7 +118,8 @@ screen dna_analysis_screen:
     default interface_import = False
     default interface_imported = False
     default selected_warrant = ""
-    default selected_evidence = ""
+    default selected_evidence_id = ""
+    default dna_selection_mode = False
     image dna_bg
 
     # Warrant samples section (right side)
@@ -134,86 +144,213 @@ screen dna_analysis_screen:
             xpos 0.55 ypos 0.28
             text "{color=#000000}DNA Profile:{/color}" size 16
             if selected_warrant == "male":
-                # Placeholder image for male DNA profile
                 add "images/data_analysis_lab/male_dna_profile.jpg" at Transform(zoom=0.475)
-                # text "{color=#000000}Male Suspect DNA Profile{/color}" size 14
             elif selected_warrant == "female":
-                # Placeholder image for female DNA profile
                 add "images/data_analysis_lab/female_dna_profile.jpg" at Transform(zoom=0.462)
-                # text "{color=#000000}Female Suspect DNA Profile{/color}" size 14
 
-    # Import evidence section (left side)
+    # Import evidence section (left side) - now shows DNA selection buttons
     hbox:
         xpos 0.15 ypos 0.145
         textbutton('Import Evidence'):
             style "afis_button"
+            sensitive dna_samples_added  # Only available after PCR
             action [
-                ToggleLocalVariable('interface_import'),
-                Show("inventory"), Hide("toolbox"),
+                ToggleLocalVariable('dna_selection_mode'),
                 SetLocalVariable('interface_imported', False),
-                SetVariable('dna_comparison_result', ''),
-                Function(set_cursor, '')]
+                SetLocalVariable('selected_evidence_id', ""),
+                SetVariable('dna_comparison_result', '')]
     
     # Compare button
     hbox:
         xpos 0.35 ypos 0.145
         textbutton('Compare'):
-            sensitive interface_imported and selected_warrant != "" and selected_evidence != ""
+            sensitive interface_imported and selected_warrant != "" and selected_evidence_id != ""
             style "afis_button"
             action [
-                Hide("inventory"),
-                Function(compare_dna_profiles, selected_evidence, selected_warrant),
-                Function(set_cursor, '')]
+                Function(compare_dna_profiles, selected_evidence_id, selected_warrant),
+                Show("dna_result_popup"),
+                If(check_analysis_completion(), Jump('analysis_complete'), NullAction())]
     
-    # Exclude mixed sample button
+    # Discard Evidence button
     hbox:
         xpos 0.55 ypos 0.145
         textbutton('Discard Evidence'):
-            sensitive interface_imported and selected_evidence == "mixed_dna_profile"
-            style "afis_button"
+            sensitive interface_imported and selected_evidence_id != "" and get_dna_sample_type(selected_evidence_id) == "mixed_dna_profile"
+            style "afis_button_wide"
             action [
-                Function(discard_mixed_sample, selected_evidence),
+                Function(discard_mixed_sample, selected_evidence_id),
                 SetLocalVariable('interface_imported', False),
-                SetLocalVariable('selected_evidence', ""),
+                SetLocalVariable('selected_evidence_id', ""),
                 SetVariable('dna_comparison_result', 'Mixed sample excluded from analysis.'),
-                Function(set_cursor, '')]
+                Show("dna_result_popup"),
+                If(check_analysis_completion(), Jump('analysis_complete'), NullAction())]
 
-    showif interface_import:
-        imagemap:
-            idle "software_interface"
-            hover "software_import_hover"
+    # DNA Selection Mode - show available DNA samples
+    if dna_selection_mode and dna_samples_added:
+        vbox:
+            xpos 0.155 ypos 0.235
+            spacing 10
+            text "{color=#000000}Select DNA Sample:{/color}" size 18
             
-            hotspot (294, 249, 660, 734) action [
-                SetLocalVariable('interface_import', False), 
-                SetLocalVariable('interface_imported', True),
-                SetLocalVariable('selected_evidence', item_dragged if item_dragged != '' else 'none'),
-                Function(set_cursor, '')]
+            for sample in dna_samples_available:
+                if dna_samples_status[sample["id"]] == "available":
+                    hbox:
+                        textbutton sample["name"]:
+                            style "afis_button"
+                            action [
+                                SetLocalVariable('selected_evidence_id', sample["id"]),
+                                SetLocalVariable('interface_imported', True),
+                                SetLocalVariable('dna_selection_mode', False)]
+                elif dna_samples_status[sample["id"]] == "identified_male":
+                    hbox:
+                        textbutton sample["name"] + " (Male Identified)":
+                            style "afis_button_wide"
+                            text_color "#00ff00"
+                            sensitive False
+                            action NullAction()
+                elif dna_samples_status[sample["id"]] == "identified_female":
+                    hbox:
+                        textbutton sample["name"] + " (Female Identified)":
+                            style "afis_button_wide"
+                            text_color "#00ff00" 
+                            sensitive False
+                            action NullAction()
+                elif dna_samples_status[sample["id"]] == "discarded":
+                    hbox:
+                        textbutton sample["name"] + " (Discarded)":
+                            style "afis_button_wide"
+                            text_color "#ff0000"
+                            sensitive False
+                            action NullAction()
+            
+            hbox:
+                textbutton "Cancel":
+                    style "afis_button"
+                    action [SetLocalVariable('dna_selection_mode', False)]
+    
+    elif dna_selection_mode and not dna_samples_added:
+        vbox:
+            xpos 0.15 ypos 0.235
+            text "{color=#ff0000}Complete PCR process first to obtain DNA samples{/color}" size 16
+            hbox:
+                textbutton "Cancel":
+                    style "afis_button"
+                    action [SetLocalVariable('dna_selection_mode', False)]
 
-    showif interface_imported and selected_evidence != "":
+    # Show selected evidence information
+    if interface_imported and selected_evidence_id != "":
         vbox:
             xpos 0.16 ypos 0.235
             text "{color=#000000}Evidence DNA Profile:{/color}" size 16
-            if selected_evidence != "none":
-                text "{color=#000000}Loaded: [get_dna_display_name(selected_evidence)]{/color}" size 14
-                if selected_evidence == "male_dna_profile":
-                    add "images/data_analysis_lab/male_dna_profile.jpg" at Transform(zoom=0.475)
-                elif selected_evidence == "female_dna_profile":
-                    add "images/data_analysis_lab/female_dna_profile.jpg" at Transform(zoom=0.462)
-                elif selected_evidence == "mixed_dna_profile":
-                    add "images/data_analysis_lab/mixed_dna_profile.jpg" at Transform(zoom=0.475)
-                else:
-                    # Fallback for any other evidence types
-                    add "gui/frame.png" at Transform(zoom=0.4)
-                    text "{color=#000000}DNA profile image not available{/color}" size 12
-            else:
-                text "{color=#000000}No DNA evidence selected{/color}" size 16
+            text "{color=#000000}Loaded: [get_dna_display_name(selected_evidence_id)]{/color}" size 14
+            
+            # Show appropriate DNA profile image
+            $ sample_type = get_dna_sample_type(selected_evidence_id)
+            if sample_type == "male_dna_profile":
+                add "images/data_analysis_lab/male_dna_profile.jpg" at Transform(zoom=0.475)
+            elif sample_type == "female_dna_profile":
+                add "images/data_analysis_lab/female_dna_profile.jpg" at Transform(zoom=0.462)
+            elif sample_type == "mixed_dna_profile":
+                add "images/data_analysis_lab/mixed_dna_profile.jpg" at Transform(zoom=0.475)
+
+screen faro_analysis_screen:
+    # FARO Scene Documentation Software with 3D analysis capabilities
+    default faro_bg = "software_interface"
+    default selected_scene = ""
+    default scene_analyzed = {"scene1": False, "scene2": False, "scene3": False}
+
+    # Always show the software interface background
+    image faro_bg
     
-    if dna_comparison_result != "":
-        hbox:
-            xpos 0.21 ypos 0.871
-            vbox:
-                text "{color=#000000}Analysis Result:{/color}" size 18
-                text "{color=#000000}[dna_comparison_result]{/color}" size 16
+    # Show scene images as centered overlays when selected
+    if selected_scene != "" and not scene_analyzed[selected_scene]:
+        # Show pre-analysis image centered on top
+        add "images/data_analysis_lab/faro/[selected_scene]_pre_analysis.png" at Transform(xalign=0.5025, yalign=0.5205, xzoom=1.18, yzoom=1.082)
+    elif selected_scene != "" and scene_analyzed[selected_scene]:
+        # Show analyzed image centered on top
+        add "images/data_analysis_lab/faro/[selected_scene]_analyzed.png" at Transform(xalign=0.5025, yalign=0.5205, xzoom=1.18, yzoom=1.082)
+    
+    # Scene selection buttons (top row)
+    hbox:
+        xpos 0.15 ypos 0.145
+        xsize 750
+        spacing 0
+        
+        textbutton "Scene 1":
+            style "afis_button"
+            action [SetLocalVariable('selected_scene', 'scene1')]
+        
+        textbutton "Scene 2":
+            style "afis_button"
+            action [SetLocalVariable('selected_scene', 'scene2')]
+        
+        textbutton "Scene 3":
+            style "afis_button"
+            action [SetLocalVariable('selected_scene', 'scene3')]
+        
+        if selected_scene == "scene1" and not scene_analyzed["scene1"]:
+            $ temp_dict = scene_analyzed.copy()
+            $ temp_dict["scene1"] = True
+            textbutton "Analyze":
+                style "afis_button"
+                action [
+                    SetLocalVariable('scene_analyzed', temp_dict),
+                    SetVariable('scene1_analyzed', True),
+                    If(check_analysis_completion(), Jump('analysis_complete'), NullAction())
+                ]
+        elif selected_scene == "scene2" and not scene_analyzed["scene2"]:
+            $ temp_dict = scene_analyzed.copy()
+            $ temp_dict["scene2"] = True
+            textbutton "Analyze":
+                style "afis_button"
+                action [
+                    SetLocalVariable('scene_analyzed', temp_dict),
+                    SetVariable('scene2_analyzed', True),
+                    If(check_analysis_completion(), Jump('analysis_complete'), NullAction())
+                ]
+        elif selected_scene == "scene3" and not scene_analyzed["scene3"]:
+            $ temp_dict = scene_analyzed.copy()
+            $ temp_dict["scene3"] = True
+            textbutton "Analyze":
+                style "afis_button"
+                action [
+                    SetLocalVariable('scene_analyzed', temp_dict),
+                    SetVariable('scene3_analyzed', True),
+                    If(check_analysis_completion(), Jump('analysis_complete'), NullAction())
+                ]
+        else:
+            textbutton "Analyze":
+                style "afis_button"
+                sensitive False
+                action NullAction()
+        
+        textbutton "Return":
+            style "afis_button"
+            action [SetLocalVariable('selected_scene', '')]
+    
+    # Show scene info when selected
+    if selected_scene != "":
+        vbox:
+            xpos 0.15 ypos 0.31
+            spacing 10
+            if scene_analyzed[selected_scene]:
+                text "{color=#ffffff}Scene [selected_scene.upper()]: ANALYZED{/color}" size 18
+                text "{color=#ffffff}Blood spatter analysis complete{/color}" size 14
+                text "{color=#ffffff}Trajectory vectors calculated{/color}" size 14
+                text "{color=#ffffff}Point of origin determined{/color}" size 14
+            else:
+                text "{color=#ffffff}Scene [selected_scene.upper()]: READY FOR ANALYSIS{/color}" size 18
+                text "{color=#ffffff}3D laser scan data loaded{/color}" size 14
+                text "{color=#ffffff}Click 'Analyze Scene' to process{/color}" size 14
+    else:
+        # Main interface info
+        vbox:
+            xalign 0.25 yalign 0.35
+            spacing 20
+            text "{color=#000000}FARO Scene Documentation Software{/color}" size 24 xalign 0.5
+            text "{color=#000000}3D Laser Scanning and Point Cloud Analysis{/color}" size 18 xalign 0.5
+            text "{color=#000000}Select a scene to begin analysis{/color}" size 16 xalign 0.5
+
 screen materials_lab_screen:
     image "materials_lab"
 
@@ -497,6 +634,69 @@ screen pcr_machine_screen:
                     action [SetVariable("pcr_step", 0), SetVariable("pcr_state", "empty"),
                             SetVariable("pcr_error", ""), Jump('analytical_instruments')]
 
+screen analysis_complete_screen:
+    # Congratulations screen similar to the first lab hallway screen
+    image "lab_hallway_dim"
+    
+    # Main congratulations message
+    vbox:
+        xalign 0.5 yalign 0.4
+        spacing 30
+        
+        text "{color=#ffffff}CONGRATULATIONS!{/color}" size 48 xalign 0.5
+        text "{color=#ffffff}All the data has been successfully processed.{/color}" size 24 xalign 0.5
+        text "{color=#ffffff}Time to prepare a report for court!{/color}" size 24 xalign 0.5
+        
+        # Summary of completed tasks
+        vbox:
+            xalign 0.5
+            spacing 15
+            if scene1_analyzed:
+                text "{color=#00ff00}✓ Scene 1 trajectory analyzed{/color}" size 18 xalign 0.5
+            if scene2_analyzed:
+                text "{color=#00ff00}✓ Scene 2 trajectory analyzed{/color}" size 18 xalign 0.5
+            if scene3_analyzed:
+                text "{color=#00ff00}✓ Scene 3 trajectory analyzed{/color}" size 18 xalign 0.5
+            if male_dna_identified:
+                text "{color=#00ff00}✓ Male DNA profile identified{/color}" size 18 xalign 0.5
+            if female_dna_identified:
+                text "{color=#00ff00}✓ Female DNA profile identified{/color}" size 18 xalign 0.5
+            if mixed_dna_discarded:
+                text "{color=#00ff00}✓ Mixed DNA sample discarded{/color}" size 18 xalign 0.5
+    
+    # End game button
+    hbox:
+        xalign 0.5 yalign 0.8
+        textbutton "End Simulation":
+            style "back_button"
+            action [Return()]
+
+screen dna_result_popup:
+    # Semi-transparent background overlay
+    add "#000000aa"
+    
+    # Main popup box
+    frame:
+        xalign 0.5 yalign 0.5
+        xsize 800
+        ysize 400
+        background Frame("gui/frame.png", 12, 12)
+        
+        vbox:
+            xalign 0.5 yalign 0.5
+            spacing 30
+            
+            # Title
+            text "DNA Analysis Complete" size 32 xalign 0.5 color "#ffffff"
+            
+            # Result text
+            text "[dna_comparison_result]" size 24 xalign 0.5 color "#ffffff" text_align 0.5
+            
+            # Close button
+            textbutton "Continue":
+                style "afis_button"
+                xalign 0.5
+                action [Hide("dna_result_popup")]
 
 transform pcr_display_transform:
     zoom 0.35

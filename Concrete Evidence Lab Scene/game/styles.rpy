@@ -43,7 +43,21 @@ style afis_button:
     xmargin 20
     ymargin 5
     xalign 0.5
+    xsize 350
     size_group "afis_button"
+
+style afis_button_wide:
+    idle_background Frame("button glossy idle", 10, 10)
+    hover_background Frame("button glossy hover", 10, 10)
+    insensitive_background Frame("button glossy idle", 10, 10)
+    xpadding 15
+    ypadding 5
+    xmargin 20
+    ymargin 5
+    xalign 0.5
+    xsize 450
+    size_group "afis_button"
+
 
 style afis_button_text:
     idle_color "#c0c0c0"
