@@ -21,11 +21,17 @@ init python:
     default_mouse = "default"
 
     scene1_collected_count = 0
-    scene1_total_evidence = 2
+    scene1_total_evidence = 2 + 1
     scene2_collected_count = 0
-    scene2_total_evidence = 5
+    scene2_total_evidence = 5 + 1
     scene3_collected_count = 0
-    scene3_total_evidence = 4
+    scene3_total_evidence = 4 + 1
+    # Track FARO scan completion
+    faro_scanned_scene1 = False
+    faro_scanned_scene2 = False
+    faro_scanned_scene3 = False
+    # Track current scene for FARO scan menu logic
+    current_scene = None
 
 transform zoom_out:
     size (config.screen_width, config.screen_height)
@@ -145,6 +151,7 @@ label start:
         addToInventory(["evidence_bag"])
         addToToolbox(["clean_swab"])
         addToToolbox(["hungarian_red"])
+        addToToolbox(["faro3d"])
         # addToToolboxPop(["clean_swab"])
         ### END OF INVENTORY ENV VARIABLES ####
     jump begin
@@ -235,6 +242,7 @@ label overview:
         show steve at bottom_right
         s "Congratulations! You've collected all the evidence from the crime scene."
         s "Let's head back to the lab to analyze what you've found."
+        s "(This means close this game and start the lab scene)"
         hide steve
         pause
 
@@ -477,15 +485,18 @@ label swab_blood_3_scene2:
 
 
 label scene1_action:
+    $ current_scene = "scene1"
     show screen full_inventory
     hide screen scene1_selection
     hide screen scene2_selection
     hide screen scene3_selection
     
     call screen scene1
+    $ current_scene = None
     jump overview
 
 label scene2_action:
+    $ current_scene = "scene2"
     show screen full_inventory
     hide screen scene1_selection
     hide screen scene2_selection
@@ -494,10 +505,11 @@ label scene2_action:
     
     if result == "knife_clicked":
         jump knife_choice_menu_scene2
-        
+    $ current_scene = None
     jump overview
 
 label scene3_action:
+    $ current_scene = "scene3"
     show screen full_inventory
     hide screen scene1_selection
     hide screen scene2_selection
@@ -506,7 +518,7 @@ label scene3_action:
     
     if result == "knife_clicked":
         jump knife_choice_menu
-        
+    $ current_scene = None
     jump overview
 
 label clean_swab:
@@ -562,6 +574,28 @@ label knife_in_box_scene2:
     "Good choice! Using a box helps preserve the evidence properly."
     "The knife has been added to your inventory."
     call screen scene2
+
+init python:
+    def scan_scene(scene_name):
+        global faro_scanned_scene1, faro_scanned_scene2, faro_scanned_scene3
+        global scene1_collected_count, scene2_collected_count, scene3_collected_count
+        if scene_name == "scene1" and not faro_scanned_scene1:
+            faro_scanned_scene1 = True
+            scene1_collected_count += 1
+            renpy.hide_screen("faro3d_scan")
+            renpy.notify("Scene 1 scanned with FARO 3D")
+        elif scene_name == "scene2" and not faro_scanned_scene2:
+            faro_scanned_scene2 = True
+            scene2_collected_count += 1
+            renpy.hide_screen("faro3d_scan")
+            renpy.notify("Scene 2 scanned with FARO 3D")
+        elif scene_name == "scene3" and not faro_scanned_scene3:
+            faro_scanned_scene3 = True
+            scene3_collected_count += 1
+            renpy.hide_screen("faro3d_scan")
+            renpy.notify("Scene 3 scanned with FARO 3D")
+        else:
+            renpy.hide_screen("faro3d_scan")
 
 
 

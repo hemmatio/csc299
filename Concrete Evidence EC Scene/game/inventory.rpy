@@ -43,6 +43,10 @@ init python:
         if item == "hungarian_red":
             hide_all_inventory()
             default_mouse = "hungarian_red"
+        if item == "faro3d":
+            # Hide inventory panels and show scan screen
+            hide_all_inventory()
+            renpy.show_screen("faro3d_scan")
 
 
     # INVENTORY FUNCTIONS -----------------------------------------------
@@ -376,7 +380,7 @@ init python:
                                 for item3 in environment_sprites:
                                     items_overlap = checkItemsOverlap(item1, item3)
                                     if items_overlap == True:
-                                        ie_overlap = True
+                                        ie_combine = True
                                         # ---- EXAMPLE INTERACTION ----
                                         if item1.type == "tape" and item3.type == "box":
                                             ie_combine = True
@@ -1089,3 +1093,22 @@ screen characterSay(who = None, what = None, jump_to = None):
 
 screen scene1:
     add environment_SM
+
+# FARO 3D scan screen
+screen faro3d_scan:
+    modal True
+    zorder 100
+    frame:
+        align (0.5, 0.5)
+        padding (20, 20)
+        has vbox
+        text "FARO 3D Scanner" size 40
+        if current_scene == "scene1" and not faro_scanned_scene1:
+            textbutton "Scan Scene 1" action [Function(scan_scene, "scene1")]
+        elif current_scene == "scene2" and not faro_scanned_scene2:
+            textbutton "Scan Scene 2" action [Function(scan_scene, "scene2")]
+        elif current_scene == "scene3" and not faro_scanned_scene3:
+            textbutton "Scan Scene 3" action [Function(scan_scene, "scene3")]
+        else:
+            text "Scene already scanned or no scene active." size 25
+        textbutton "Close" action Hide("faro3d_scan")
