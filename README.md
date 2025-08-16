@@ -1,5 +1,7 @@
-# csc299
-Forensics Pursuit ROP
+# Concrete Evidence
+Forensics Pursuit ROP: Concrete Evidence
+
+Check out the [itch page](https://hemmatio.itch.io/forensic-pursuits-2025)
 
 # Server guide
 The webserver will run by default on `localhost:3000`, which is also what the game is configured to write to.
