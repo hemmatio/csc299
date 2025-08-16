@@ -148,7 +148,7 @@ label start:
 
         # adding items to inventory/evidence box and toolbox
 
-        addToInventory(["evidence_bag"])
+        # addToInventory(["evidence_bag"])
         addToToolbox(["clean_swab"])
         addToToolbox(["hungarian_red"])
         addToToolbox(["faro3d"])
@@ -187,6 +187,7 @@ label begin:
     show scene2_knife at zoom_out
     show steve at bottom_right
     s "To the left is scene 2. More blood, and one of the potential weapons, a knife."
+    s "There's a lot of blood here. You'll probably have to use multiple swabs for this."
     hide steve
     scene scene3 at zoom_out
     show scene3_knife at zoom_out
@@ -333,12 +334,13 @@ screen scene2:
     
     if default_mouse == "hungarian_red":
         # Footprints and drag marks area for hungarian red
-        imagebutton:
-            idle Null(573, 556)
-            hover Transform(Frame(Solid("#ff000030"), 5, 5), size=(623, 556))
-            xpos 7
-            ypos 600
-            action Jump("hungarian_red_footprints_scene2")
+        if "footprints_hungarian_red_scene2" not in inventory_items:
+            imagebutton:
+                idle Null(573, 556)
+                hover Transform(Frame(Solid("#ff000030"), 5, 5), size=(623, 556))
+                xpos 7
+                ypos 600
+                action Jump("hungarian_red_footprints_scene2")
 
     # Knife interaction
     if "bloody_default_knife" not in inventory_items:
@@ -381,12 +383,13 @@ screen scene3:
 
     if default_mouse == "hungarian_red":
         # Footprints and drag marks area for hungarian red
-        imagebutton:
-            idle Null(900, 268)
-            hover Transform(Frame(Solid("#ff000030"), 5, 5), size=(900, 268))  # Red tint for hungarian red
-            xpos 940
-            ypos 775
-            action Jump("hungarian_red_drag_marks_scene3")
+        if "drag_mark_hungarian_red_scene3" not in inventory_items:
+            imagebutton:
+                idle Null(900, 268)
+                hover Transform(Frame(Solid("#ff000030"), 5, 5), size=(900, 268))  # Red tint for hungarian red
+                xpos 940
+                ypos 775
+                action Jump("hungarian_red_drag_marks_scene3")
     
     # Knife interaction
     if "bloody_kitchen_knife" not in inventory_items:
@@ -422,7 +425,11 @@ label swab_blood_drag_scene3:
     call screen scene3
 
 label hungarian_red_drag_marks_scene3:
-    if "drag_mark_blood_swab_scene3" in inventory_items:
+    if "drag_mark_hungarian_red_scene3" in inventory_items:
+        $ default_mouse = "default"
+        s "You've already used Hungarian Red here."
+        call screen scene3
+    elif "drag_mark_blood_swab_scene3" in inventory_items:
         $ addToInventory(["drag_mark_hungarian_red_scene3"])
         $ scene3_collected_count += 1
         $ default_mouse = "default"
@@ -435,7 +442,11 @@ label hungarian_red_drag_marks_scene3:
         call screen scene3
 
 label hungarian_red_footprints_scene2:
-    if "blood_swab_2_scene2" in inventory_items:
+    if "footprints_hungarian_red_scene2" in inventory_items:
+        $ default_mouse = "default"
+        s "You've already used Hungarian Red here."
+        call screen scene2
+    elif "blood_swab_2_scene2" in inventory_items:
         $ addToInventory(["footprints_hungarian_red_scene2"])
         $ scene2_collected_count += 1
         $ default_mouse = "default"

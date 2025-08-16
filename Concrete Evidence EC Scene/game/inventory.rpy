@@ -998,7 +998,7 @@ screen inventoryItemMenu(item):
         background "#FFFFFF30"
         xpos int(item.x)
         ypos int(item.y)
-        imagebutton auto "UI/view-inventory-item-%s.png" align (0.0, 0.5) at half_size action [Show("inspectItem", items = [item.type]), Hide("inventoryItemMenu")]
+        # imagebutton auto "UI/view-inventory-item-%s.png" align (0.0, 0.5) at half_size action [Show("inspectItem", items = [item.type]), Hide("inventoryItemMenu")]
         imagebutton auto "UI/use-inventory-item-%s.png" align (1.0, 0.5) at half_size action [Function(startDrag, item = item), Hide("inventoryItemMenu")]
         # imagebutton auto "UI/expand-inventory-item-%s.png" align (2.0, 0.5) at half_size action If(renpy.get_screen("toolboxpop") == None, true= Show("toolboxpop"), false= Hide("toolboxpop")) 
 
@@ -1011,7 +1011,7 @@ screen toolboxItemMenu(item):
         xpos int(item.x)
         ypos int(item.y)
         $ items = [item.type]
-        imagebutton auto "UI/view-inventory-item-%s.png" align (0.0, 0.5) at half_size action [Show("inspectItem", items = [item.type]), Hide("toolboxItemMenu")]
+        # imagebutton auto "UI/view-inventory-item-%s.png" align (0.0, 0.5) at half_size action [Show("inspectItem", items = [item.type]), Hide("toolboxItemMenu")]
         imagebutton auto "UI/use-inventory-item-%s.png" align (1.0, 0.5) at half_size action [Function(toolbox_actions, item = "{}".format(items[0])), Hide("toolboxItemMenu")]
         # imagebutton auto "UI/expand-inventory-item-%s.png" align (1.0, 0.5) at half_size action If(renpy.get_screen("toolboxpop") == None, true= (Show("toolboxpop")), false= Hide("toolboxpop")) 
 
@@ -1024,7 +1024,7 @@ screen toolboxPopItemMenu(item):
         background "#FFFFFF30"
         xpos int(item.x)
         ypos int(item.y)
-        imagebutton auto "UI/view-inventory-item-%s.png" align (0.0, 0.5) at half_size action [Show("inspectItem", items = [item.type]), Hide("toolboxPopItemMenu")]
+        # imagebutton auto "UI/view-inventory-item-%s.png" align (0.0, 0.5) at half_size action [Show("inspectItem", items = [item.type]), Hide("toolboxPopItemMenu")]
         imagebutton auto "UI/use-inventory-item-%s.png" align (1.0, 0.5) at half_size action [Function(startDrag3, item = item), Hide("toolboxPopItemMenu")]
 
 """
